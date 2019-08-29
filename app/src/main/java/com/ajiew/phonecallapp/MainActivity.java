@@ -71,9 +71,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-
-
-
         // 使用使用 SettingsCompat 检查是否开启了权限
         switchCallCheckChangeListener = (buttonView, isChecked) -> {
             if (isChecked && !SettingsCompat.canDrawOverlays(MainActivity.this)) {
