@@ -1,5 +1,6 @@
 package com.ajiew.phonecallapp;
 
+import android.Manifest;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
@@ -37,12 +39,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         INSTANCE = this;
         setContentView(R.layout.activity_main);
-        String[]  permissions = new String[4];
+        String[]  permissions = new String[5];
 
        permissions[0] = "android.permission.READ_PHONE_STATE";
         permissions[1] = "android.permission.PROCESS_OUTGOING_CALLS";
         permissions[2] = "android.permission.READ_CALL_LOG";
         permissions[3] = "android.permission.READ_PHONE_STATE";
+        permissions[4] = "android.permission.CALL_PHONE";
 /*
 
         permissions[0] = "android.permission.READ_PHONE_STATE";
@@ -66,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
         tv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                OnePiexActivity.startOnePix(MainActivity.this);
+
             }
         });
 
@@ -87,13 +90,24 @@ public class MainActivity extends AppCompatActivity {
 
             Intent callListener = new Intent(MainActivity.this, CallListenerService.class);
             if (isChecked) {
-                startService(callListener);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(callListener);
+                } else {
+                    startService(callListener);
+                }
                 Toast.makeText(this, "电话监听服务已开启", Toast.LENGTH_SHORT).show();
             } else {
                 stopService(callListener);
                 Toast.makeText(this, "电话监听服务已关闭", Toast.LENGTH_SHORT).show();
             }
         };
+
+        Intent callListener = new Intent(MainActivity.this, CallListenerService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(callListener);
+        } else {
+            startService(callListener);
+        }
         switchListenCall.setOnCheckedChangeListener(switchCallCheckChangeListener);
     }
 

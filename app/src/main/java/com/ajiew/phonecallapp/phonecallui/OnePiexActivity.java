@@ -3,6 +3,7 @@ package com.ajiew.phonecallapp.phonecallui;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.SystemClock;
@@ -23,22 +24,32 @@ public class OnePiexActivity extends Activity {
 
 
     private static final String TAG ="OnePiexActivity" ;
+    private boolean recall;
 
-    public  static void startOnePix(Context context){
+    public  static void startOnePix(Context context,boolean recall){
         Intent it = new Intent(context, OnePiexActivity.class);
         it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        // it.putExtra("tele",outPhone);
+         it.putExtra("recall",recall);
         context.startActivity(it);
     }
 
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        recall = intent.getBooleanExtra("recall",false);
+        docall();
+
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-       // Intent intent = getIntent();
+       Intent intent = getIntent();
        // String tele = intent.getStringExtra("tele");
 //
 //
+        recall = intent.getBooleanExtra("recall",false);
         Log.e("OnePiexActivity", "onCreate: ");
         //设置1像素
         Window window = getWindow();
@@ -50,24 +61,39 @@ public class OnePiexActivity extends Activity {
         params.width = 1;
         window.setAttributes(params);
         //检查屏幕状态
+        docall();
+    }
+
+    private void docall() {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                SystemClock.sleep(3000);
+                SystemClock.sleep(500);
                 rejectCall();
                 SystemClock.sleep(2000);
-               // DataManager.getSingleton().doOutCall(OnePiexActivity.this);
+                if (recall){
+                    reCall(OnePiexActivity.this);
+                }
                 finish();
             }
         }).start();
     }
- 
+
     @Override
     protected void onResume() {
         super.onResume();
     }
 
-    public void rejectCall() {
+    public static void reCall(Context context){
+        Intent intent = new Intent(); // 意图对象：动作 + 数据
+        intent.setAction(Intent.ACTION_CALL); // 设置动作
+        Uri data = Uri.parse("tel:" + "17108588585"); // 设置数据
+        intent.setData(data);
+        context.startActivity(intent); // 激活Activity组件
+    }
+
+
+    public  static void rejectCall() {
         try {
             Method method = Class.forName("android.os.ServiceManager")
                     .getMethod("getService", String.class);
